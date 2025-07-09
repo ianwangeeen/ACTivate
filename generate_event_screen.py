@@ -308,6 +308,7 @@ def recommendations_tab(recommender, db_manager, selected_user_id):
                     st.markdown(f"""
                     <div class="event-card">
                         <h4>🎫 {event['title']}</h4>
+                        <img src="{event['image_url']}" alt="{event['title']}" style="width:800px; height:400px; object-fit:cover; border-radius:8px; margin-bottom:1rem;" />
                         <p><strong>Category:</strong> {event['category']}</p>
                         <p><strong>Description:</strong> {event['description']}</p>
                         <p><strong>📍 Location:</strong> {event['location']}</p>
@@ -361,7 +362,8 @@ def recommendations_tab(recommender, db_manager, selected_user_id):
                 with event_col:
                     st.markdown(f"""
                     <div class="event-card">
-                        <h4>{event['title']}</h4>
+                        <h4>🎫 {event['title']}</h4>
+                        <img src="{event['image_url']}" alt="{event['title']}" style="width:800px; height:400px; object-fit:cover; border-radius:8px; margin-bottom:1rem;" />
                         <p><strong>Category:</strong> {event['category']}</p>
                         <p><strong>Description:</strong> {event['description']}</p>
                         <p><strong>📍 Location:</strong> {event['location']}</p>
@@ -421,6 +423,7 @@ def my_events_tab(db_manager, selected_user_id):
                     st.markdown(f"""
                     <div class="event-card">
                         <h4>🎫 {event['title']}</h4>
+                        <img src="{event['image_url']}" alt="{event['title']}" style="width:800px; height:400px; object-fit:cover; border-radius:8px; margin-bottom:1rem;" />
                         <p><strong>Category:</strong> {event['category']}</p>
                         <p><strong>Description:</strong> {event['description']}</p>
                         <p><strong>📍 Location:</strong> {event['location']}</p>
