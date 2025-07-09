@@ -5,123 +5,7 @@ from typing import Dict, List, Tuple
 import re
 from setup_database import DatabaseManager
 import sqlite3
-
-# Sample data - Users and their interests
-# USERS_DATA = {
-#     "users": [
-#         {
-#             "id": 1,
-#             "name": "Alice Johnson",
-#             "interests": ["technology", "artificial intelligence", "startups", "networking", "innovation"]
-#         },
-#         {
-#             "id": 2,
-#             "name": "Bob Smith",
-#             "interests": ["fitness", "running", "health", "outdoor activities", "sports"]
-#         },
-#         {
-#             "id": 3,
-#             "name": "Carol Davis",
-#             "interests": ["art", "painting", "creativity", "museums", "culture"]
-#         },
-#         {
-#             "id": 4,
-#             "name": "David Wilson",
-#             "interests": ["music", "concerts", "jazz", "live performance", "entertainment"]
-#         },
-#         {
-#             "id": 5,
-#             "name": "Eva Martinez",
-#             "interests": ["cooking", "food", "recipes", "culinary arts", "restaurants"]
-#         }
-#     ]
-# }
-
-# # Sample events database
-# EVENTS_DATA = {
-#     "events": [
-#         {
-#             "id": 1,
-#             "title": "Tech Innovation Summit 2025",
-#             "description": "Join industry leaders discussing AI, startups, and cutting-edge technology",
-#             "category": "Technology",
-#             "tags": ["technology", "artificial intelligence", "startups", "innovation", "networking"],
-#             "location": "Convention Center",
-#             "date": "2025-08-15",
-#             "price": 150
-#         },
-#         {
-#             "id": 2,
-#             "title": "Morning Fitness Bootcamp",
-#             "description": "High-intensity outdoor workout session for all fitness levels",
-#             "category": "Fitness",
-#             "tags": ["fitness", "outdoor activities", "health", "sports", "exercise"],
-#             "location": "City Park",
-#             "date": "2025-07-20",
-#             "price": 25
-#         },
-#         {
-#             "id": 3,
-#             "title": "Modern Art Gallery Opening",
-#             "description": "Exclusive preview of contemporary paintings and sculptures",
-#             "category": "Arts & Culture",
-#             "tags": ["art", "painting", "culture", "museums", "creativity"],
-#             "location": "Downtown Gallery",
-#             "date": "2025-07-25",
-#             "price": 0
-#         },
-#         {
-#             "id": 4,
-#             "title": "Jazz Under the Stars",
-#             "description": "Live jazz performance in an intimate outdoor setting",
-#             "category": "Music",
-#             "tags": ["music", "jazz", "live performance", "entertainment", "concerts"],
-#             "location": "Rooftop Venue",
-#             "date": "2025-08-05",
-#             "price": 40
-#         },
-#         {
-#             "id": 5,
-#             "title": "Culinary Masterclass",
-#             "description": "Learn advanced cooking techniques from professional chefs",
-#             "category": "Food & Drink",
-#             "tags": ["cooking", "food", "culinary arts", "recipes", "learning"],
-#             "location": "Culinary Institute",
-#             "date": "2025-07-30",
-#             "price": 80
-#         },
-#         {
-#             "id": 6,
-#             "title": "Marathon Training Group",
-#             "description": "Weekly running group preparing for the city marathon",
-#             "category": "Fitness",
-#             "tags": ["running", "fitness", "sports", "health", "training"],
-#             "location": "Various Routes",
-#             "date": "2025-07-15",
-#             "price": 15
-#         },
-#         {
-#             "id": 7,
-#             "title": "Startup Pitch Competition",
-#             "description": "Watch entrepreneurs pitch their innovative business ideas",
-#             "category": "Business",
-#             "tags": ["startups", "innovation", "technology", "networking", "entrepreneurship"],
-#             "location": "Business Hub",
-#             "date": "2025-08-10",
-#             "price": 30
-#         },
-#         {
-#             "id": 8,
-#             "title": "Food Festival Downtown",
-#             "description": "Taste cuisines from around the world at local restaurants",
-#             "category": "Food & Drink",
-#             "tags": ["food", "restaurants", "culture", "festival", "dining"],
-#             "location": "Downtown Square",
-#             "date": "2025-08-01",
-#             "price": 20
-#         }
-#     ]
-# }
+from datetime import datetime
 
 class EventRecommender:
     def __init__(self, db_manager: DatabaseManager):
@@ -194,7 +78,6 @@ def load_recommender():
 def main():
     st.set_page_config(
         page_title="Event Recommender",
-        page_icon="🎯",
         layout="wide",
         initial_sidebar_state="expanded"
     )
@@ -230,24 +113,32 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    st.markdown('<h1 class="main-header">🎯 Event Recommender</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">ACTivate</h1>', unsafe_allow_html=True)
     
     # Initialize recommender
     recommender, db_manager = load_recommender()
 
     users = db_manager.get_all_users()
-
-    # Sidebar for user selection
-    st.sidebar.title("👤 Select User")
     user_options = {f"{user['name']}": user['id'] for user in users}
     selected_user_name = st.sidebar.selectbox("Choose a user:", list(user_options.keys()))
     selected_user_id = user_options[selected_user_name]
     
-    # Similarity threshold
-    st.sidebar.markdown("### 🎯 Recommendation Criteria")
-    st.sidebar.info("Only events with >50% similarity match will be shown")
+
+    tab1, tab2 = st.tabs(["Home", "📅 My Events"])
+
+    with tab1:
+        recommendations_tab(recommender, db_manager, selected_user_id)
     
-    # Get user information
+    with tab2:
+        my_events_tab(db_manager, selected_user_id)
+    
+    # Move sidebar content to a separate function
+    sidebar_content(db_manager)
+
+def recommendations_tab(recommender, db_manager, selected_user_id):
+    """Content for the recommendations tab"""
+    
+    # Get user information from database
     user = db_manager.get_user_by_id(selected_user_id)
     
     if user:
@@ -262,14 +153,16 @@ def main():
         # Get recommendations (only events with >50% similarity)
         recommendations = recommender.recommend_events(selected_user_id, similarity_threshold=0.5)
         
-        st.markdown("## Recommended")
+        st.markdown("## 🎪 Recommended For You")
         
         if recommendations:
-            st.success(f"Found {len(recommendations)} event(s) recommended for you!")
+            st.success(f"Found {len(recommendations)} event(s) that may interest you!")
             
             for i, (event, similarity) in enumerate(recommendations, 1):
-
-                st.markdown(f"""
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    st.markdown(f"""
                     <div class="event-card">
                         <h4>🎫 {event['title']}</h4>
                         <p><strong>Category:</strong> {event['category']}</p>
@@ -281,55 +174,156 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # col1, col2 = st.columns([3, 1])
                 
-                # with col1:
-                #     st.markdown(f"""
-                #     <div class="event-card">
-                #         <h4>🎫 {event['title']}</h4>
-                #         <p><strong>Category:</strong> {event['category']}</p>
-                #         <p><strong>Description:</strong> {event['description']}</p>
-                #         <p><strong>📍 Location:</strong> {event['location']}</p>
-                #         <p><strong>📅 Date:</strong> {event['date']}</p>
-                #         <p><strong>💰 Price:</strong> ${event['price']}</p>
-                #         <p><strong>🏷️ Tags:</strong> {', '.join(event['tags'])}</p>
-                #     </div>
-                #     """, unsafe_allow_html=True)
-                
-                # with col2:
-                #     st.markdown(f"""
-                #     <div class="similarity-score">
-                #         <strong>Match Score</strong><br>
-                #         <span style="font-size: 1.5em; color: #1f77b4;">{similarity:.2%}</span>
-                #     </div>
-                #     """, unsafe_allow_html=True)
+                with col2:
+                    # Registration button
+                    is_registered = db_manager.is_user_registered(selected_user_id, event['id'])
+                    if is_registered:
+                        if st.button(f"✅ Registered", key=f"unreg_{event['id']}", type="secondary"):
+                            if db_manager.unregister_user_from_event(selected_user_id, event['id']):
+                                st.success("Unregistered successfully!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to unregister.")
+                    else:
+                        if st.button(f"📝 Register", key=f"reg_{event['id']}", type="primary"):
+                            if db_manager.register_user_for_event(selected_user_id, event['id']):
+                                st.success("Registered successfully!")
+                                st.rerun()
+                            else:
+                                st.error("Registration failed.")
                 
                 st.markdown("---")
         else:
-            st.warning("No events found with >50% similarity match. Try a different user or check back later for new events!")
-    
-    # Additional features in sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📊 App Features")
-    st.sidebar.markdown("""
-    - **Interest Matching**: Recommends events based on user interests
-    - **Similarity Scoring**: Uses Jaccard similarity for matching
-    - **Mobile Friendly**: Optimized for phone interfaces
-    - **Real-time Updates**: Dynamic recommendations
-    """)
-    
-    # Show all events option
-    if st.sidebar.checkbox("Show All Events"):
+            st.warning("There are no recommendations available at the moment. Please check back later or explore the All Events below!")
+
         st.markdown("## 📋 All Available Events")
-        for event in recommender.events:
-            st.markdown(f"""
-            <div class="event-card">
-                <h4>{event['title']}</h4>
-                <p><strong>Category:</strong> {event['category']}</p>
-                <p><strong>Price:</strong> ${event['price']}</p>
-                <p><strong>Date:</strong> {event['date']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+        events = db_manager.get_all_events()
+        for event in events:
+            event_col, register_col = st.columns([3, 1])
+
+            with event_col:
+                st.markdown(f"""
+                <div class="event-card">
+                    <h4>{event['title']}</h4>
+                    <p><strong>Category:</strong> {event['category']}</p>
+                    <p><strong>Price:</strong> ${event['price']}</p>
+                    <p><strong>Date:</strong> {event['date']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with register_col:
+                if st.button(f"📝 Register", key=f"reg_all_{event['id']}", type="primary"):
+                    if db_manager.register_user_for_event(selected_user_id, event['id']):
+                        st.success("Registered successfully!")
+                        st.rerun()
+                    else:
+                        st.error("Registration failed.")
+
+def my_events_tab(db_manager, selected_user_id):
+    """Content for the My Events tab"""
+    user = db_manager.get_user_by_id(selected_user_id)
+    
+    if user:
+        st.markdown(f"## 📅 {user['name']}'s Registered Events")
+        
+        # Get user's registered events
+        user_events = db_manager.get_user_events(selected_user_id)
+        
+        if user_events:
+            st.success(f"You are registered for {len(user_events)} events!")
+            
+            # Sort events by date
+            user_events.sort(key=lambda x: x['date'])
+            
+            for event in user_events:
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    # Parse registration date for display
+                    try:
+                        reg_date = datetime.fromisoformat(event['registration_date'])
+                        reg_date_str = reg_date.strftime("%Y-%m-%d %H:%M")
+                    except:
+                        reg_date_str = event['registration_date']
+                    
+                    st.markdown(f"""
+                    <div class="event-card">
+                        <h4>🎫 {event['title']}</h4>
+                        <p><strong>Category:</strong> {event['category']}</p>
+                        <p><strong>Description:</strong> {event['description']}</p>
+                        <p><strong>📍 Location:</strong> {event['location']}</p>
+                        <p><strong>📅 Date:</strong> {event['date']}</p>
+                        <p><strong>💰 Price:</strong> ${event['price']}</p>
+                        <p><strong>🏷️ Tags:</strong> {', '.join(event['tags'])}</p>
+                        <p><strong>✅ Registered:</strong> {reg_date_str}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    # Unregister button
+                    if st.button(f"❌ Unregister", key=f"unreg_my_{event['id']}", type="secondary"):
+                        if db_manager.unregister_user_from_event(selected_user_id, event['id']):
+                            st.success("Unregistered successfully!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to unregister.")
+                
+                st.markdown("---")
+
+        else:
+            st.info("You haven't registered for any events yet. Check out the Recommendations tab to find events you might like!")
+            
+            # Quick link to recommendations
+            # if st.button("🔍 Find Events to Register For", type="primary"):
+            #     st.switch_page("recommendations")
+
+def sidebar_content(db_manager):
+    """Sidebar content moved to separate function"""
+    # Admin section for adding new data
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔧 Admin Panel")
+    
+    # Add new user
+    # if st.sidebar.expander("Add New User"):
+    #     new_user_name = st.text_input("User Name")
+    #     new_user_interests = st.text_area("Interests (comma-separated)")
+        
+    #     if st.button("Add User"):
+    #         if new_user_name and new_user_interests:
+    #             interests_list = [interest.strip() for interest in new_user_interests.split(',')]
+    #             if db_manager.add_user(new_user_name, interests_list):
+    #                 st.success("User added successfully!")
+    #                 st.rerun()
+    #             else:
+    #                 st.error("Failed to add user.")
+    
+    # Add new event
+    # if st.sidebar.expander("Add New Event"):
+    #     new_event_title = st.text_input("Event Title")
+    #     new_event_desc = st.text_area("Event Description")
+    #     new_event_category = st.text_input("Category")
+    #     new_event_tags = st.text_area("Tags (comma-separated)")
+    #     new_event_location = st.text_input("Location")
+    #     new_event_date = st.date_input("Date")
+    #     new_event_price = st.number_input("Price", min_value=0.0, value=0.0)
+        
+    #     if st.button("Add Event"):
+    #         if all([new_event_title, new_event_desc, new_event_category, new_event_tags, new_event_location]):
+    #             tags_list = [tag.strip() for tag in new_event_tags.split(',')]
+    #             if db_manager.add_event(new_event_title, new_event_desc, new_event_category, 
+    #                                   tags_list, new_event_location, str(new_event_date), new_event_price):
+    #                 st.success("Event added successfully!")
+    #                 st.rerun()
+    #             else:
+    #                 st.error("Failed to add event.")
+    
+    # Database status
+    st.sidebar.markdown("### 📊 Database Status")
+    total_users = len(db_manager.get_all_users())
+    total_events = len(db_manager.get_all_events())
+    st.sidebar.metric("Total Users", total_users)
+    st.sidebar.metric("Total Events", total_events)
 
 if __name__ == "__main__":
     main()

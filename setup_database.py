@@ -34,6 +34,19 @@ class DatabaseManager:
                 price REAL NOT NULL
             )
         ''')
+
+        # Create user_events table for tracking registrations
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                event_id INTEGER NOT NULL,
+                registration_date TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (event_id) REFERENCES events (id),
+                UNIQUE(user_id, event_id)
+            )
+        ''')
         
         # Check if tables are empty and populate with sample data
         cursor.execute("SELECT COUNT(*) FROM users")
@@ -62,28 +75,28 @@ class DatabaseManager:
         events_data = [
             (1, "Tech Innovation Summit 2025", "Join industry leaders discussing AI, startups, and cutting-edge technology", 
              "Technology", json.dumps(["technology", "artificial intelligence", "startups", "innovation", "networking"]), 
-             "Convention Center", "2025-08-15", 150),
+             "Marina Bay Convention Center", "15 Aug 2025", 150),
             (2, "Morning Fitness Bootcamp", "High-intensity outdoor workout session for all fitness levels", 
              "Fitness", json.dumps(["fitness", "outdoor activities", "health", "sports", "exercise"]), 
-             "City Park", "2025-07-20", 25),
+             "Punggol Park", "20 Jul 2025", 25),
             (3, "Modern Art Gallery Opening", "Exclusive preview of contemporary paintings and sculptures", 
              "Arts & Culture", json.dumps(["art", "painting", "culture", "museums", "creativity"]), 
-             "Downtown Gallery", "2025-07-25", 0),
+             "Marina Bay Convention Centre", "25 Jul 2025", 0),
             (4, "Jazz Under the Stars", "Live jazz performance in an intimate outdoor setting", 
              "Music", json.dumps(["music", "jazz", "live performance", "entertainment", "concerts"]), 
-             "Rooftop Venue", "2025-08-05", 40),
+             "Blu Jaz Clarke Quay", "5 Aug 2025", 40),
             (5, "Culinary Masterclass", "Learn advanced cooking techniques from professional chefs", 
              "Food & Drink", json.dumps(["cooking", "food", "culinary arts", "recipes", "learning"]), 
-             "Culinary Institute", "2025-07-30", 80),
+             "Palate Sensations", "30 Jul 2025", 80),
             (6, "Marathon Training Group", "Weekly running group preparing for the city marathon", 
              "Fitness", json.dumps(["running", "fitness", "sports", "health", "training"]), 
-             "Various Routes", "2025-07-15", 15),
+             "East Coast Park", "15 Jul 2025", 15),
             (7, "Startup Pitch Competition", "Watch entrepreneurs pitch their innovative business ideas", 
              "Business", json.dumps(["startups", "innovation", "technology", "networking", "entrepreneurship"]), 
-             "Business Hub", "2025-08-10", 30),
+             "Tachyon@Tampines M-Works", "10 Aug 2025", 30),
             (8, "Food Festival Downtown", "Taste cuisines from around the world at local restaurants", 
              "Food & Drink", json.dumps(["food", "restaurants", "culture", "festival", "dining"]), 
-             "Downtown Square", "2025-08-01", 20)
+             "iLights@Marina Bay", "1 Aug 2025", 20)
         ]
         
         cursor.executemany('''
@@ -185,3 +198,82 @@ class DatabaseManager:
         
         conn.close()
         return success
+    
+    def register_user_for_event(self, user_id: int, event_id: int) -> bool:
+        """Register a user for an event"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        
+        try:
+            from datetime import datetime
+            cursor.execute('''
+                INSERT INTO user_events (user_id, event_id, registration_date) 
+                VALUES (?, ?, ?)
+            ''', (user_id, event_id, datetime.now().isoformat()))
+            conn.commit()
+            success = True
+        except sqlite3.Error:
+            success = False
+        
+        conn.close()
+        return success
+    
+    def unregister_user_from_event(self, user_id: int, event_id: int) -> bool:
+        """Unregister a user from an event"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                DELETE FROM user_events WHERE user_id = ? AND event_id = ?
+            ''', (user_id, event_id))
+            conn.commit()
+            success = True
+        except sqlite3.Error:
+            success = False
+        
+        conn.close()
+        return success
+    
+    def get_user_events(self, user_id: int) -> List[Dict]:
+        """Get all events a user is registered for"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT e.id, e.title, e.description, e.category, e.tags, e.location, e.date, e.price, ue.registration_date
+            FROM events e
+            JOIN user_events ue ON e.id = ue.event_id
+            WHERE ue.user_id = ?
+            ORDER BY e.date
+        ''', (user_id,))
+        
+        events = []
+        for row in cursor.fetchall():
+            events.append({
+                'id': row[0],
+                'title': row[1],
+                'description': row[2],
+                'category': row[3],
+                'tags': json.loads(row[4]),
+                'location': row[5],
+                'date': row[6],
+                'price': row[7],
+                'registration_date': row[8]
+            })
+        
+        conn.close()
+        return events
+    
+    def is_user_registered(self, user_id: int, event_id: int) -> bool:
+        """Check if a user is registered for an event"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT COUNT(*) FROM user_events WHERE user_id = ? AND event_id = ?
+        ''', (user_id, event_id))
+        
+        count = cursor.fetchone()[0]
+        conn.close()
+        return count > 0
