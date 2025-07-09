@@ -7,6 +7,21 @@ from setup_database import DatabaseManager
 import sqlite3
 from datetime import datetime
 
+
+def format_date(date_str):
+    # From "2025-08-15" to "15 Aug 25"
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%d %b %y")
+    except ValueError:
+        return date_str
+    
+def format_price(price):
+    # Format price to include dollar sign and two decimal places
+    display_price = price
+    if display_price == 0:
+        return "Free"
+    return f"${price:.2f}" if isinstance(price, (int, float)) else price
+
 class EventRecommender:
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
@@ -32,7 +47,6 @@ class EventRecommender:
     
     def recommend_events(self, user_id: int, similarity_threshold: float = 0.5) -> List[Tuple[Dict, float]]:
         """Recommend events for a specific user with similarity above threshold"""
-        # user = next((u for u in self.users if u['id'] == user_id), None)
         user = self.db_manager.get_user_by_id(user_id)
         if not user:
             return []
@@ -69,6 +83,79 @@ class EventRecommender:
         conn.close()
         return user
 
+def filter_events(events: List[Dict], filter_type: str, filter_value: str) -> List[Dict]:
+    """Filter events based on selected filter type and value"""
+    if filter_type == "All" or filter_value == "All":
+        return events
+    
+    filtered_events = []
+    for event in events:
+        if filter_type == "Category":
+            if event['category'].lower() == filter_value.lower():
+                filtered_events.append(event)
+        elif filter_type == "Location":
+            if event['location'].lower() == filter_value.lower():
+                filtered_events.append(event)
+        elif filter_type == "Price Range":
+            price = float(event['price'])
+            if filter_value == "Free" and price == 0:
+                filtered_events.append(event)
+            elif filter_value == "$1 - $50" and 1 <= price <= 50:
+                filtered_events.append(event)
+            elif filter_value == "$51 - $100" and 51 <= price <= 100:
+                filtered_events.append(event)
+            elif filter_value == "$100+" and price > 100:
+                filtered_events.append(event)
+        elif filter_type == "Tags":
+            event_tags_lower = [tag.lower() for tag in event['tags']]
+            if filter_value.lower() in event_tags_lower:
+                filtered_events.append(event)
+        elif filter_type == "Date":
+            try:
+                event_date = datetime.strptime(event['date'], '%Y-%m-%d')
+                today = datetime.now()
+                
+                if filter_value == "Today":
+                    if event_date.date() == today.date():
+                        filtered_events.append(event)
+                elif filter_value == "This Week":
+                    days_diff = (event_date - today).days
+                    if 0 <= days_diff <= 7:
+                        filtered_events.append(event)
+                elif filter_value == "This Month":
+                    if event_date.month == today.month and event_date.year == today.year:
+                        filtered_events.append(event)
+                elif filter_value == "Future":
+                    if event_date > today:
+                        filtered_events.append(event)
+            except ValueError:
+                # If date parsing fails, include the event
+                filtered_events.append(event)
+    
+    return filtered_events
+
+def get_filter_options(events: List[Dict], filter_type: str) -> List[str]:
+    """Get available filter options based on filter type"""
+    if filter_type == "All":
+        return ["All"]
+    elif filter_type == "Category":
+        categories = list(set(event['category'] for event in events))
+        return ["All"] + sorted(categories)
+    elif filter_type == "Location":
+        locations = list(set(event['location'] for event in events))
+        return ["All"] + sorted(locations)
+    elif filter_type == "Price Range":
+        return ["All", "Free", "$1 - $50", "$51 - $100", "$100+"]
+    elif filter_type == "Tags":
+        all_tags = set()
+        for event in events:
+            all_tags.update(event['tags'])
+        return ["All"] + sorted(list(all_tags))
+    elif filter_type == "Date":
+        return ["All", "Today", "This Week", "This Month", "Future"]
+    
+    return ["All"]
+
 # Initialize the recommender
 @st.cache_data
 def load_recommender():
@@ -77,7 +164,7 @@ def load_recommender():
 
 def main():
     st.set_page_config(
-        page_title="Event Recommender",
+        page_title="ACTivate",
         layout="wide",
         initial_sidebar_state="expanded"
     )
@@ -110,6 +197,13 @@ def main():
         border-radius: 5px;
         text-align: center;
     }
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -123,7 +217,6 @@ def main():
     selected_user_name = st.sidebar.selectbox("Choose a user:", list(user_options.keys()))
     selected_user_id = user_options[selected_user_name]
     
-
     tab1, tab2 = st.tabs(["Home", "📅 My Events"])
 
     with tab1:
@@ -150,15 +243,65 @@ def recommendations_tab(recommender, db_manager, selected_user_id):
         </div>
         """, unsafe_allow_html=True)
         
+        # Filter Section - Place this before recommendations
+        st.markdown("## 🔍 Filter Events")
+        
+        # Get all events for filtering
+        all_events = db_manager.get_all_events()
+        
+        # Filter controls in a styled container
+        with st.container():
+            # st.markdown('<div class="filter-section">', unsafe_allow_html=True)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                filter_type = st.selectbox(
+                    "Filter by:",
+                    ["All", "Category", "Location", "Price Range", "Tags", "Date"],
+                    key="filter_type"
+                )
+            
+            with col2:
+                # Get filter options based on selected filter type
+                filter_options = get_filter_options(all_events, filter_type)
+                filter_value = st.selectbox(
+                    "Select value:",
+                    filter_options,
+                    key="filter_value"
+                )
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+        
         # Get recommendations (only events with >50% similarity)
         recommendations = recommender.recommend_events(selected_user_id, similarity_threshold=0.5)
         
-        st.markdown("## 🎪 Recommended For You")
-        
+        # Apply filters to recommendations
         if recommendations:
-            st.success(f"Found {len(recommendations)} event(s) that may interest you!")
+            recommended_events = [event for event, similarity in recommendations]
+            filtered_recommended_events = filter_events(recommended_events, filter_type, filter_value)
             
-            for i, (event, similarity) in enumerate(recommendations, 1):
+            # Rebuild recommendations list with filtered events and their similarities
+            filtered_recommendations = []
+            for event, similarity in recommendations:
+                if event in filtered_recommended_events:
+                    filtered_recommendations.append((event, similarity))
+        else:
+            filtered_recommendations = []
+        
+        # Display filtered recommendations
+        if filter_type == "All" or filter_value == "All":
+            st.markdown("## 🎪 Recommended For You")
+        else:
+            st.markdown(f"## 🎪 Recommended For You - {filter_type}: {filter_value}")
+        
+        if filtered_recommendations:
+            if filter_type == "All":
+                st.info(f"Showing {len(filtered_recommendations)} recommended event(s)!")
+            else:
+                st.success(f"Found {len(filtered_recommendations)} recommended event(s) that match your filter!")
+            
+            for i, (event, similarity) in enumerate(filtered_recommendations, 1):
                 col1, col2 = st.columns([3, 1])
                 
                 with col1:
@@ -168,12 +311,12 @@ def recommendations_tab(recommender, db_manager, selected_user_id):
                         <p><strong>Category:</strong> {event['category']}</p>
                         <p><strong>Description:</strong> {event['description']}</p>
                         <p><strong>📍 Location:</strong> {event['location']}</p>
-                        <p><strong>📅 Date:</strong> {event['date']}</p>
-                        <p><strong>💰 Price:</strong> ${event['price']}</p>
+                        <p><strong>📅 Date:</strong> {format_date(event['date'])}</p>
+                        <p><strong>🕐 Time:</strong> {event['time']}</p>
+                        <p><strong>💰 Price:</strong> {format_price(event['price'])}</p>
                         <p><strong>🏷️ Tags:</strong> {', '.join(event['tags'])}</p>
                     </div>
                     """, unsafe_allow_html=True)
-                
                 
                 with col2:
                     # Registration button
@@ -195,30 +338,58 @@ def recommendations_tab(recommender, db_manager, selected_user_id):
                 
                 st.markdown("---")
         else:
-            st.warning("There are no recommendations available at the moment. Please check back later or explore the All Events below!")
+            if recommendations:
+                st.info(f"No recommended events match the current filter ({filter_type}: {filter_value}). Try adjusting your filter or check all events below.")
+            else:
+                st.warning("There are no recommendations available at the moment. Please check back later or explore the All Events below!")
 
-        st.markdown("## 📋 All Available Events")
-        events = db_manager.get_all_events()
-        for event in events:
-            event_col, register_col = st.columns([3, 1])
+        # Apply filters to all events
+        filtered_events = filter_events(all_events, filter_type, filter_value)
+        
+        # Display filtered events
+        if filter_type == "All" or filter_value == "All":
+            st.markdown("## 📋 All Available Events")
+        else:
+            st.markdown(f"## 📋 Events - {filter_type}: {filter_value}")
+        
+        if filtered_events:
+            st.info(f"Showing {len(filtered_events)} event(s)")
+            
+            for event in filtered_events:
+                event_col, register_col = st.columns([3, 1])
 
-            with event_col:
-                st.markdown(f"""
-                <div class="event-card">
-                    <h4>{event['title']}</h4>
-                    <p><strong>Category:</strong> {event['category']}</p>
-                    <p><strong>Price:</strong> ${event['price']}</p>
-                    <p><strong>Date:</strong> {event['date']}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                with event_col:
+                    st.markdown(f"""
+                    <div class="event-card">
+                        <h4>{event['title']}</h4>
+                        <p><strong>Category:</strong> {event['category']}</p>
+                        <p><strong>Description:</strong> {event['description']}</p>
+                        <p><strong>📍 Location:</strong> {event['location']}</p>
+                        <p><strong>📅 Date:</strong> {format_date(event['date'])}</p>
+                        <p><strong>🕐 Time:</strong> {event['time']}</p>
+                        <p><strong>💰 Price:</strong> {format_price(event['price'])}</p>
+                        <p><strong>🏷️ Tags:</strong> {', '.join(event['tags'])}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-            with register_col:
-                if st.button(f"📝 Register", key=f"reg_all_{event['id']}", type="primary"):
-                    if db_manager.register_user_for_event(selected_user_id, event['id']):
-                        st.success("Registered successfully!")
-                        st.rerun()
+                with register_col:
+                    is_registered = db_manager.is_user_registered(selected_user_id, event['id'])
+                    if is_registered:
+                        if st.button(f"✅ Registered", key=f"unreg_all_{event['id']}", type="secondary"):
+                            if db_manager.unregister_user_from_event(selected_user_id, event['id']):
+                                st.success("Unregistered successfully!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to unregister.")
                     else:
-                        st.error("Registration failed.")
+                        if st.button(f"📝 Register", key=f"reg_all_{event['id']}", type="primary"):
+                            if db_manager.register_user_for_event(selected_user_id, event['id']):
+                                st.success("Registered successfully!")
+                                st.rerun()
+                            else:
+                                st.error("Registration failed.")
+        else:
+            st.warning(f"No events found for {filter_type}: {filter_value}")
 
 def my_events_tab(db_manager, selected_user_id):
     """Content for the My Events tab"""
@@ -254,7 +425,8 @@ def my_events_tab(db_manager, selected_user_id):
                         <p><strong>Description:</strong> {event['description']}</p>
                         <p><strong>📍 Location:</strong> {event['location']}</p>
                         <p><strong>📅 Date:</strong> {event['date']}</p>
-                        <p><strong>💰 Price:</strong> ${event['price']}</p>
+                        <p><strong>🕐 Time:</strong> {event['time']}</p>
+                        <p><strong>💰 Price:</strong> {format_price(event['price'])}</p>
                         <p><strong>🏷️ Tags:</strong> {', '.join(event['tags'])}</p>
                         <p><strong>✅ Registered:</strong> {reg_date_str}</p>
                     </div>
@@ -273,50 +445,12 @@ def my_events_tab(db_manager, selected_user_id):
 
         else:
             st.info("You haven't registered for any events yet. Check out the Recommendations tab to find events you might like!")
-            
-            # Quick link to recommendations
-            # if st.button("🔍 Find Events to Register For", type="primary"):
-            #     st.switch_page("recommendations")
 
 def sidebar_content(db_manager):
     """Sidebar content moved to separate function"""
     # Admin section for adding new data
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🔧 Admin Panel")
-    
-    # Add new user
-    # if st.sidebar.expander("Add New User"):
-    #     new_user_name = st.text_input("User Name")
-    #     new_user_interests = st.text_area("Interests (comma-separated)")
-        
-    #     if st.button("Add User"):
-    #         if new_user_name and new_user_interests:
-    #             interests_list = [interest.strip() for interest in new_user_interests.split(',')]
-    #             if db_manager.add_user(new_user_name, interests_list):
-    #                 st.success("User added successfully!")
-    #                 st.rerun()
-    #             else:
-    #                 st.error("Failed to add user.")
-    
-    # Add new event
-    # if st.sidebar.expander("Add New Event"):
-    #     new_event_title = st.text_input("Event Title")
-    #     new_event_desc = st.text_area("Event Description")
-    #     new_event_category = st.text_input("Category")
-    #     new_event_tags = st.text_area("Tags (comma-separated)")
-    #     new_event_location = st.text_input("Location")
-    #     new_event_date = st.date_input("Date")
-    #     new_event_price = st.number_input("Price", min_value=0.0, value=0.0)
-        
-    #     if st.button("Add Event"):
-    #         if all([new_event_title, new_event_desc, new_event_category, new_event_tags, new_event_location]):
-    #             tags_list = [tag.strip() for tag in new_event_tags.split(',')]
-    #             if db_manager.add_event(new_event_title, new_event_desc, new_event_category, 
-    #                                   tags_list, new_event_location, str(new_event_date), new_event_price):
-    #                 st.success("Event added successfully!")
-    #                 st.rerun()
-    #             else:
-    #                 st.error("Failed to add event.")
     
     # Database status
     st.sidebar.markdown("### 📊 Database Status")

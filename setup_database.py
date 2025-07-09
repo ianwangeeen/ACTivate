@@ -31,6 +31,7 @@ class DatabaseManager:
                 tags TEXT NOT NULL,
                 location TEXT NOT NULL,
                 date TEXT NOT NULL,
+                time TEXT NOT NULL,
                 price REAL NOT NULL
             )
         ''')
@@ -71,37 +72,37 @@ class DatabaseManager:
             INSERT INTO users (id, name, interests) VALUES (?, ?, ?)
         ''', users_data)
         
-        # Sample events data
+        # Sample events data (date format is saved as YYYY-MM-DD)
         events_data = [
             (1, "Tech Innovation Summit 2025", "Join industry leaders discussing AI, startups, and cutting-edge technology", 
              "Technology", json.dumps(["technology", "artificial intelligence", "startups", "innovation", "networking"]), 
-             "Marina Bay Convention Center", "15 Aug 2025", 150),
+             "Marina Bay Convention Center", "2025-08-15", "0900H - 1700H", 150),
             (2, "Morning Fitness Bootcamp", "High-intensity outdoor workout session for all fitness levels", 
              "Fitness", json.dumps(["fitness", "outdoor activities", "health", "sports", "exercise"]), 
-             "Punggol Park", "20 Jul 2025", 25),
+             "Punggol Park", "2025-07-20", "1900H - 2100H", 25),
             (3, "Modern Art Gallery Opening", "Exclusive preview of contemporary paintings and sculptures", 
              "Arts & Culture", json.dumps(["art", "painting", "culture", "museums", "creativity"]), 
-             "Marina Bay Convention Centre", "25 Jul 2025", 0),
+             "Marina Bay Convention Centre", "2025-07-25", "2000H - 2230H", 0),
             (4, "Jazz Under the Stars", "Live jazz performance in an intimate outdoor setting", 
              "Music", json.dumps(["music", "jazz", "live performance", "entertainment", "concerts"]), 
-             "Blu Jaz Clarke Quay", "5 Aug 2025", 40),
+             "Blu Jaz Clarke Quay", "2025-08-05", "2000H - 2100H", 40),
             (5, "Culinary Masterclass", "Learn advanced cooking techniques from professional chefs", 
              "Food & Drink", json.dumps(["cooking", "food", "culinary arts", "recipes", "learning"]), 
-             "Palate Sensations", "30 Jul 2025", 80),
+             "Palate Sensations", "2025-07-30", "1900H-2030H", 80),
             (6, "Marathon Training Group", "Weekly running group preparing for the city marathon", 
              "Fitness", json.dumps(["running", "fitness", "sports", "health", "training"]), 
-             "East Coast Park", "15 Jul 2025", 15),
+             "East Coast Park", "2025-07-15", "1900H - 2100H", 15),
             (7, "Startup Pitch Competition", "Watch entrepreneurs pitch their innovative business ideas", 
              "Business", json.dumps(["startups", "innovation", "technology", "networking", "entrepreneurship"]), 
-             "Tachyon@Tampines M-Works", "10 Aug 2025", 30),
+             "Tachyon@Tampines M-Works", "2025-08-10", "1000H - 1500H", 30),
             (8, "Food Festival Downtown", "Taste cuisines from around the world at local restaurants", 
              "Food & Drink", json.dumps(["food", "restaurants", "culture", "festival", "dining"]), 
-             "iLights@Marina Bay", "1 Aug 2025", 20)
+             "iLights@Marina Bay", "2025-08-01", "1900H - 2100H", 20)
         ]
         
         cursor.executemany('''
-            INSERT INTO events (id, title, description, category, tags, location, date, price) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO events (id, title, description, category, tags, location, date, time, price) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', events_data)
     
     def get_all_users(self) -> List[Dict]:
@@ -126,7 +127,7 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, title, description, category, tags, location, date, price FROM events")
+        cursor.execute("SELECT id, title, description, category, tags, location, date, time, price FROM events")
         events = []
         for row in cursor.fetchall():
             events.append({
@@ -137,7 +138,8 @@ class DatabaseManager:
                 'tags': json.loads(row[4]),
                 'location': row[5],
                 'date': row[6],
-                'price': row[7]
+                'time': row[7],
+                'price': row[8]
             })
         
         conn.close()
@@ -181,16 +183,16 @@ class DatabaseManager:
         return success
     
     def add_event(self, title: str, description: str, category: str, tags: List[str], 
-                  location: str, date: str, price: float) -> bool:
+                  location: str, date: str, time: str, price: float) -> bool:
         """Add a new event to the database"""
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         
         try:
             cursor.execute('''
-                INSERT INTO events (title, description, category, tags, location, date, price) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (title, description, category, json.dumps(tags), location, date, price))
+                INSERT INTO events (title, description, category, tags, location, date, time, price) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (title, description, category, json.dumps(tags), location, date, time, price))
             conn.commit()
             success = True
         except sqlite3.Error:
@@ -241,7 +243,7 @@ class DatabaseManager:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT e.id, e.title, e.description, e.category, e.tags, e.location, e.date, e.price, ue.registration_date
+            SELECT e.id, e.title, e.description, e.category, e.tags, e.location, e.date, e.time, e.price, ue.registration_date
             FROM events e
             JOIN user_events ue ON e.id = ue.event_id
             WHERE ue.user_id = ?
@@ -258,8 +260,9 @@ class DatabaseManager:
                 'tags': json.loads(row[4]),
                 'location': row[5],
                 'date': row[6],
-                'price': row[7],
-                'registration_date': row[8]
+                'time': row[7],
+                'price': row[8],
+                'registration_date': row[9]
             })
         
         conn.close()
