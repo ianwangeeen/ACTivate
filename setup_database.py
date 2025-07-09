@@ -17,7 +17,9 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
-                interests TEXT NOT NULL
+                interests TEXT NOT NULL,
+                preferred_day TEXT DEFAULT NULL,
+                office_location TEXT DEFAULT NULL
             )
         ''')
         
@@ -62,15 +64,15 @@ class DatabaseManager:
         """Populate the database with sample data"""
         # Sample users data
         users_data = [
-            (1, "Samuel Lim", json.dumps(["technology", "artificial intelligence", "startups", "networking", "innovation"])),
-            (2, "Tan Zeng Iain", json.dumps(["fitness", "running", "health", "outdoor activities", "sports"])),
-            (3, "Qing Whey", json.dumps(["art", "painting", "creativity", "museums", "culture"])),
-            (4, "Jefferson Low", json.dumps(["music", "concerts", "jazz", "live performance", "entertainment"])),
-            (5, "Choo Lan Chan", json.dumps(["cooking", "food", "recipes", "culinary arts", "restaurants"]))
+            (1, "Samuel Lim", json.dumps(["technology", "artificial intelligence", "startups", "networking", "innovation"]), json.dumps(["Wednesday", "Friday"]), "DTTB"),
+            (2, "Tan Zeng Iain", json.dumps(["fitness", "running", "health", "outdoor activities", "sports"]), json.dumps(["Monday", "Friday"]), "Connection 1"),
+            (3, "Qing Whey", json.dumps(["art", "painting", "creativity", "museums", "culture"]), json.dumps(["Friday", "Saturday", "Sunday"]), "Nee Soon Camp"),
+            (4, "Jefferson Low", json.dumps(["music", "concerts", "jazz", "live performance", "entertainment"]), json.dumps(["Friday", "Saturday"]), "Nee Soon Camp"),
+            (5, "Choo Lan Chan", json.dumps(["cooking", "food", "recipes", "culinary arts", "restaurants"]), json.dumps(["Wednesday", "Saturday", "Sunday"]), "BMC")
         ]
         
         cursor.executemany('''
-            INSERT INTO users (id, name, interests) VALUES (?, ?, ?)
+            INSERT INTO users (id, name, interests, preferred_day, office_location) VALUES (?, ?, ?, ?, ?)
         ''', users_data)
         
         # Sample events data (date format is saved as YYYY-MM-DD)
@@ -152,14 +154,16 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, name, interests FROM users WHERE id = ?", (user_id,))
+        cursor.execute("SELECT id, name, interests, preferred_day, office_location FROM users WHERE id = ?", (user_id,))
         row = cursor.fetchone()
         
         if row:
             user = {
                 'id': row[0],
                 'name': row[1],
-                'interests': json.loads(row[2])
+                'interests': json.loads(row[2]),
+                'preferred_day': json.loads(row[3]) if row[3] else None,
+                'office_location': row[4]
             }
         else:
             user = None
@@ -167,15 +171,15 @@ class DatabaseManager:
         conn.close()
         return user
     
-    def add_user(self, name: str, interests: List[str]) -> bool:
+    def add_user(self, name: str, interests: List[str], preferred_day: List[str], office_location: str) -> bool:
         """Add a new user to the database"""
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         
         try:
             cursor.execute('''
-                INSERT INTO users (name, interests) VALUES (?, ?)
-            ''', (name, json.dumps(interests)))
+                INSERT INTO users (name, interests, preferred_day, office_location) VALUES (?, ?, ?, ?)
+            ''', (name, json.dumps(interests), json.dumps(preferred_day), office_location))
             conn.commit()
             success = True
         except sqlite3.Error:
