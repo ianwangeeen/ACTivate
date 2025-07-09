@@ -6,7 +6,43 @@ import re
 from setup_database import DatabaseManager
 import sqlite3
 from datetime import datetime
+import folium
+from streamlit_folium import folium_static
+import requests
+import time
+from geopy.geocoders import Nominatim
+import os
 
+# Location coordinates for Singapore venues (you can add more as needed)
+SINGAPORE_LOCATIONS = {
+    'Marina Bay Convention Center': (1.2825, 103.8596),
+    'Marina Bay Convention Centre': (1.2825, 103.8596),
+    'Punggol Park': (1.3707, 103.9063),
+    'Blu Jaz Clarke Quay': (1.2883, 103.8438),
+    'Palate Sensations': (1.3082, 103.8238),
+    'East Coast Park': (1.2966, 103.8672),
+    'Tachyon@Tampines M-Works': (1.3457, 103.9421),
+    'iLights@Marina Bay': (1.2823, 103.8579),
+    'Singapore': (1.3521, 103.8198)  # Default fallback
+}
+
+def get_location_coordinates(location_name: str) -> Tuple[float, float]:
+    """Get coordinates for a location, with fallback to Singapore center"""
+    # Check if we have predefined coordinates
+    if location_name in SINGAPORE_LOCATIONS:
+        return SINGAPORE_LOCATIONS[location_name]
+    
+    # Try to geocode the location
+    try:
+        geolocator = Nominatim(user_agent="event_recommender")
+        location = geolocator.geocode(f"{location_name}, Singapore")
+        if location:
+            return (location.latitude, location.longitude)
+    except:
+        pass
+    
+    # Fallback to Singapore center
+    return SINGAPORE_LOCATIONS['Singapore']
 
 def format_date(date_str):
     # From "2025-08-15" to "15 Aug 25"
@@ -62,26 +98,73 @@ class EventRecommender:
         recommendations.sort(key=lambda x: x[1], reverse=True)
         
         return recommendations
+
+def create_event_map(events: List[Dict], selected_user_id: int, db_manager: DatabaseManager) -> folium.Map:
+    """Create a folium map with event markers"""
+    # Center the map on Singapore
+    singapore_center = [1.3521, 103.8198]
+    m = folium.Map(location=singapore_center, zoom_start=11)
     
-    def get_user_by_id(self, user_id: int) -> Dict:
-        """Get a specific user by ID"""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
+    # Get user for personalized recommendations
+    user = db_manager.get_user_by_id(selected_user_id)
+    recommender = EventRecommender(db_manager)
+    
+    # Get recommendations for color coding
+    recommendations = recommender.recommend_events(selected_user_id, 0.1)  # Lower threshold for more variety
+    recommended_event_ids = [event['id'] for event, similarity in recommendations]
+    
+    # Create a mapping of event IDs to similarity scores
+    similarity_scores = {event['id']: similarity for event, similarity in recommendations}
+    
+    for event in events:
+        lat, lon = get_location_coordinates(event['location'])
         
-        cursor.execute("SELECT id, name, interests FROM users WHERE id = ?", (user_id,))
-        row = cursor.fetchone()
-        
-        if row:
-            user = {
-                'id': row[0],
-                'name': row[1],
-                'interests': json.loads(row[2])
-            }
+        # Determine marker color based on recommendation status
+        if event['id'] in recommended_event_ids:
+            similarity = similarity_scores[event['id']]
+            if similarity > 0.7:
+                color = 'red'  # High similarity
+                icon_color = 'white'
+            elif similarity > 0.5:
+                color = 'orange'  # Medium similarity
+                icon_color = 'white'
+            else:
+                color = 'yellow'  # Low similarity
+                icon_color = 'black'
         else:
-            user = None
+            color = 'blue'  # Not recommended
+            icon_color = 'white'
         
-        conn.close()
-        return user
+        # Check if user is registered for this event
+        is_registered = db_manager.is_user_registered(selected_user_id, event['id'])
+        if is_registered:
+            color = 'green'  # User is registered
+            icon_color = 'white'
+        
+        # Create popup content
+        popup_content = f"""
+        <div style="width: 250px;">
+            <h4>{event['title']}</h4>
+            <p><strong>Category:</strong> {event['category']}</p>
+            <p><strong>Date:</strong> {format_date(event['date'])}</p>
+            <p><strong>Time:</strong> {event['time']}</p>
+            <p><strong>Price:</strong> {format_price(event['price'])}</p>
+            <p><strong>Location:</strong> {event['location']}</p>
+            <p><strong>Tags:</strong> {', '.join(event['tags'])}</p>
+            <p>{event['description'][:100]}...</p>
+            {'✅ Registered' if is_registered else ''}
+        </div>
+        """
+        
+        # Add marker to map
+        folium.Marker(
+            location=[lat, lon],
+            popup=folium.Popup(popup_content, max_width=300),
+            tooltip=f"{event['title']} - {format_date(event['date'])}",
+            icon=folium.Icon(color=color, icon='calendar', prefix='fa')
+        ).add_to(m)
+    
+    return m
 
 def filter_events(events: List[Dict], filter_type: str, filter_value: str) -> List[Dict]:
     """Filter events based on selected filter type and value"""
@@ -204,6 +287,13 @@ def main():
         margin-bottom: 1rem;
         border: 1px solid #dee2e6;
     }
+    .map-legend {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -217,7 +307,7 @@ def main():
     selected_user_name = st.sidebar.selectbox("Choose a user:", list(user_options.keys()))
     selected_user_id = user_options[selected_user_name]
     
-    tab1, tab2 = st.tabs(["Home", "📅 My Events"])
+    tab1, tab2, tab3 = st.tabs(["Home", "📅 My Events", "🗺️ Map View"])
 
     with tab1:
         recommendations_tab(recommender, db_manager, selected_user_id)
@@ -225,8 +315,89 @@ def main():
     with tab2:
         my_events_tab(db_manager, selected_user_id)
     
+    with tab3:
+        map_view_tab(db_manager, selected_user_id)
+    
     # Move sidebar content to a separate function
     sidebar_content(db_manager)
+
+def map_view_tab(db_manager: DatabaseManager, selected_user_id: int):
+    """Content for the map view tab"""
+    user = db_manager.get_user_by_id(selected_user_id)
+    
+    if user:
+        st.markdown(f"## 🗺️ Map View - {user['name']}")
+        
+        # Get all events for filtering
+        all_events = db_manager.get_all_events()
+        
+        # Filter controls
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            filter_type = st.selectbox(
+                "Filter by:",
+                ["All", "Category", "Location", "Price Range", "Tags", "Date"],
+                key="map_filter_type"
+            )
+        
+        with col2:
+            filter_options = get_filter_options(all_events, filter_type)
+            filter_value = st.selectbox(
+                "Select value:",
+                filter_options,
+                key="map_filter_value"
+            )
+        
+        # Apply filters
+        filtered_events = filter_events(all_events, filter_type, filter_value)
+        
+        # Map legend
+        st.markdown("""
+        <div class="map-legend">
+            <h4>🎨 Map Legend:</h4>
+            <p>🔴 Red: Highly recommended for you (>70% match)</p>
+            <p>🟠 Orange: Recommended (50-70% match)</p>
+            <p>🟡 Yellow: Somewhat related (10-50% match)</p>
+            <p>🔵 Blue: Other events</p>
+            <p>🟢 Green: Events you're registered for</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if filtered_events:
+            # Create and display map
+            event_map = create_event_map(filtered_events, selected_user_id, db_manager)
+            folium_static(event_map, width=1200, height=600)
+            
+            # Display summary
+            if filter_type == "All":
+                st.info(f"Showing {len(filtered_events)} events on the map")
+            else:
+                st.info(f"Showing {len(filtered_events)} events matching '{filter_type}: {filter_value}'")
+            
+            # Optional: Show event list below map
+            with st.expander("📋 Event List", expanded=False):
+                for event in filtered_events:
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.write(f"**{event['title']}**")
+                        st.write(f"📍 {event['location']} | 📅 {format_date(event['date'])} | 💰 {format_price(event['price'])}")
+                        st.write(f"Category: {event['category']}")
+                    
+                    with col2:
+                        is_registered = db_manager.is_user_registered(selected_user_id, event['id'])
+                        if is_registered:
+                            st.write("✅ Registered")
+                        else:
+                            if st.button(f"Register", key=f"map_reg_{event['id']}", type="primary"):
+                                if db_manager.register_user_for_event(selected_user_id, event['id']):
+                                    st.success("Registered!")
+                                    st.rerun()
+                    
+                    st.markdown("---")
+        else:
+            st.warning(f"No events found matching '{filter_type}: {filter_value}'")
 
 def recommendations_tab(recommender, db_manager, selected_user_id):
     """Content for the recommendations tab"""
@@ -251,8 +422,6 @@ def recommendations_tab(recommender, db_manager, selected_user_id):
         
         # Filter controls in a styled container
         with st.container():
-            # st.markdown('<div class="filter-section">', unsafe_allow_html=True)
-            
             col1, col2 = st.columns(2)
             
             with col1:
@@ -270,8 +439,6 @@ def recommendations_tab(recommender, db_manager, selected_user_id):
                     filter_options,
                     key="filter_value"
                 )
-            
-            st.markdown('</div>', unsafe_allow_html=True)
         
         # Get recommendations (only events with >50% similarity)
         recommendations = recommender.recommend_events(selected_user_id, similarity_threshold=0.5)
