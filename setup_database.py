@@ -17,6 +17,7 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
+                category TEXT NOT NULL,
                 interests TEXT NOT NULL,
                 preferred_day TEXT DEFAULT NULL,
                 office_location TEXT DEFAULT NULL
@@ -65,42 +66,42 @@ class DatabaseManager:
         """Populate the database with sample data"""
         # Sample users data
         users_data = [
-            (1, "Samuel Lim", json.dumps(["technology", "artificial intelligence", "startups", "networking", "innovation"]), json.dumps(["Wednesday", "Friday"]), "DTTB"),
-            (2, "Tan Zeng Iain", json.dumps(["fitness", "running", "health", "outdoor activities", "sports"]), json.dumps(["Monday", "Friday"]), "Connection 1"),
-            (3, "Qing Whey", json.dumps(["art", "painting", "creativity", "museums", "culture"]), json.dumps(["Friday", "Saturday", "Sunday"]), "Nee Soon Camp"),
-            (4, "Jefferson Low", json.dumps(["music", "concerts", "jazz", "live performance", "entertainment"]), json.dumps(["Friday", "Saturday"]), "Nee Soon Camp"),
-            (5, "Choo Lan Chan", json.dumps(["cooking", "food", "recipes", "culinary arts", "restaurants"]), json.dumps(["Wednesday", "Saturday", "Sunday"]), "BMC")
+            (1, "Samuel Lim", json.dumps(["Technology & Digital", "Learning & Personal Growth"]), json.dumps(["artificial intelligence", "data science", "software development", "career & networking", "investing & financial literacy"]), json.dumps(["Wednesday", "Friday"]), "DTTB"),
+            (2, "Tan Zeng Iain", json.dumps(["Health & Wellness"]), json.dumps(["badminton", "meditation & mindfulness", "mental health", "running & marathons"]), json.dumps(["Monday", "Friday"]), "Connection 1"),
+            (3, "Qing Whey", json.dumps(["Arts & Creativity"]), json.dumps(["calligraphy & typography", "graphic design", "painting & drawing"]), json.dumps(["Friday", "Saturday", "Sunday"]), "Nee Soon Camp"),
+            (4, "Jefferson Low", json.dumps(["Music & Performance", "Arts & Creativity"]), json.dumps(["band", "karaoke", "photography", "video production", "journaling & scrapbooking"]), json.dumps(["Friday", "Saturday"]), "Nee Soon Camp"),
+            (5, "Choo Lan Chan", json.dumps(["Food & Drink", "Music & Performance"]), json.dumps(["stand-up comedy", "foodie trails", "wine appreciation", "coffee appreciation"]), json.dumps(["Wednesday", "Saturday", "Sunday"]), "BMC")
         ]
         
         cursor.executemany('''
-            INSERT INTO users (id, name, interests, preferred_day, office_location) VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (id, name, category, interests, preferred_day, office_location) VALUES (?, ?, ?, ?, ?, ?)
         ''', users_data)
         
         # Sample events data (date format is saved as YYYY-MM-DD)
         events_data = [
             (1, "Tech Innovation Summit 2025", "Join industry leaders discussing AI, startups, and cutting-edge technology", 
-             "Technology", json.dumps(["technology", "artificial intelligence", "startups", "innovation", "networking"]), 
+             "Technology", json.dumps(["technology", "artificial intelligence", "data science", "web3 & blockchain", "career & networking"]), 
              "Marina Bay Convention Center", "2025-08-15", "0900H - 1700H", 150, 1, "https://cdn.prod.website-files.com/67ccce3ca9de94dc1fafaee6/6852eb78fd649405d57a7864_BG%20Tech%20Innovation.png"),
             (2, "Morning Fitness Bootcamp", "High-intensity outdoor workout session for all fitness levels", 
-             "Fitness", json.dumps(["fitness", "outdoor activities", "health", "sports", "exercise"]), 
+             "Fitness", json.dumps(["mental health", "nutrition", "running & marathons"]), 
              "Punggol Park", "2025-07-20", "1900H - 2100H", 25, 2, "https://static1.squarespace.com/static/5691e3f8a2bab8b5b8e2cc2e/t/57d751e36b8f5b4daf5cefb4/1473729002130/?format=1500w"),
             (3, "Modern Art Gallery Opening", "Exclusive preview of contemporary paintings and sculptures", 
-             "Arts & Culture", json.dumps(["art", "painting", "culture", "museums", "creativity"]), 
+             "Arts & Culture", json.dumps(["calligraphy & typography", "diy crafts & upcycling", "painting & drawing", "photography", "urban sketching", "video production"]), 
              "Marina Bay Convention Centre", "2025-07-25", "2000H - 2230H", 0, 3, "https://sgmagazine.com/wp-content/uploads/2023/12/ArtScience-Museum-at-Marina-Bay-Sands.jpg"),
             (4, "Jazz Under the Stars", "Live jazz performance in an intimate outdoor setting", 
-             "Music", json.dumps(["music", "jazz", "live performance", "entertainment", "concerts"]), 
+             "Music", json.dumps(["foodie trails", "wine appreciation", "band", "karaoke"]), 
              "Blu Jaz Clarke Quay", "2025-08-05", "2000H - 2100H", 40, 4, "https://www.blujazcafe.net/products/5a67480.jpg"),
             (5, "Culinary Masterclass", "Learn advanced cooking techniques from professional chefs", 
-             "Food & Drink", json.dumps(["cooking", "food", "culinary arts", "recipes", "learning"]), 
+             "Food & Drink", json.dumps(["coffee appreciation", "foodie trails", "wine appreciation"]), 
              "Palate Sensations", "2025-07-30", "1900H-2030H", 80, 5, "https://media.nedigital.sg/fairprice/images/9120d59a-b799-4ee1-ab1c-5afb878af8a9/Lifestyle%20Image.jpg"),
             (6, "Marathon Training Group", "Weekly running group preparing for the city marathon", 
-             "Fitness", json.dumps(["running", "fitness", "sports", "health", "training"]), 
+             "Fitness", json.dumps(["running & marathons", "mental health"]), 
              "East Coast Park", "2025-07-15", "1900H - 2100H", 15, 4, "https://images.squarespace-cdn.com/content/v1/55b7f4ffe4b0a286c4c3499e/84d6fbf5-4a9f-4af6-bd3d-b526c4a3229d/training-for-a-marathon"),
             (7, "Startup Pitch Competition", "Watch entrepreneurs pitch their innovative business ideas", 
-             "Business", json.dumps(["startups", "innovation", "technology", "networking", "entrepreneurship"]), 
+             "Business", json.dumps(["career & networking", "investing & financial literacy", "artificial intelligence", "data science", "software development", "web3 & blockchain"]), 
              "Tachyon@Tampines M-Works", "2025-08-10", "1000H - 1500H", 30, 3, "https://www.webintravel.com/wp-content/uploads/2025/05/featured-GSP-2025-Winners-1066x440.png"),
             (8, "Food Festival Downtown", "Taste cuisines from around the world at local restaurants", 
-             "Food & Drink", json.dumps(["food", "restaurants", "culture", "festival", "dining"]), 
+             "Food & Drink", json.dumps(["foodie trails", "local heritage & hidden gems", "weekend explorers"]), 
              "iLights@Marina Bay", "2025-08-01", "1900H - 2100H", 20, 2, "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2HM7hGKBe7T4auSW1MXMGGmMoTpwC-WbOFw&s")
         ]
         
@@ -114,13 +115,16 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, name, interests FROM users")
+        cursor.execute("SELECT id, name, category, interests, preferred_day, office_location FROM users")
         users = []
         for row in cursor.fetchall():
             users.append({
                 'id': row[0],
                 'name': row[1],
-                'interests': json.loads(row[2])
+                'category': row[2],
+                'interests': json.loads(row[3]),
+                'preferred_day': json.loads(row[4]) if row[4] else None,
+                'office_location': row[5]
             })
         
         conn.close()
@@ -156,16 +160,17 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, name, interests, preferred_day, office_location FROM users WHERE id = ?", (user_id,))
+        cursor.execute("SELECT id, name, category, interests, preferred_day, office_location FROM users WHERE id = ?", (user_id,))
         row = cursor.fetchone()
         
         if row:
             user = {
                 'id': row[0],
                 'name': row[1],
-                'interests': json.loads(row[2]),
-                'preferred_day': json.loads(row[3]) if row[3] else None,
-                'office_location': row[4]
+                'category': row[2],
+                'interests': json.loads(row[3]),
+                'preferred_day': json.loads(row[4]) if row[4] else None,
+                'office_location': row[5]
             }
         else:
             user = None
@@ -173,15 +178,15 @@ class DatabaseManager:
         conn.close()
         return user
     
-    def add_user(self, name: str, interests: List[str], preferred_day: List[str], office_location: str) -> bool:
+    def add_user(self, name: str, category: str, interests: List[str], preferred_day: List[str], office_location: str) -> bool:
         """Add a new user to the database"""
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         
         try:
             cursor.execute('''
-                INSERT INTO users (name, interests, preferred_day, office_location) VALUES (?, ?, ?, ?)
-            ''', (name, json.dumps(interests), json.dumps(preferred_day), office_location))
+                INSERT INTO users (name, category, interests, preferred_day, office_location) VALUES (?, ?, ?, ?)
+            ''', (name, json.dumps(category), json.dumps(interests), json.dumps(preferred_day), office_location))
             conn.commit()
             success = True
         except sqlite3.Error:
@@ -290,3 +295,73 @@ class DatabaseManager:
         count = cursor.fetchone()[0]
         conn.close()
         return count > 0
+    
+    def get_event_by_id(self, event_id: int) -> Dict | None:
+        """Get a specific event by ID"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id, title, description, category, tags, location, date, time, price, organiser_id, image_url FROM events WHERE id = ?", (event_id,))
+        row = cursor.fetchone()
+        
+        conn.close()
+        if row:
+            return {
+                'id': row[0],
+                'title': row[1],
+                'description': row[2],
+                'category': row[3],
+                'tags': json.loads(row[4]),
+                'location': row[5],
+                'date': row[6],
+                'time': row[7],
+                'price': row[8],
+                'organiser_id': row[9],
+                'image_url': row[10]
+            }
+        return None
+
+    def get_organiser_id_for_event(self, event_id: int) -> int | None:
+        """Get the organiser_id for a given event_id"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        cursor.execute("SELECT organiser_id FROM events WHERE id = ?", (event_id,))
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else None
+
+    def is_organiser_of_event(self, user_id: int, event_id: int) -> bool:
+        """Check if a user is the organizer of a specific event"""
+        organiser_id = self.get_organiser_id_for_event(event_id)
+        return organiser_id == user_id
+
+    def update_event(self, event_id: int, event_data: Dict) -> bool:
+        """Update an existing event in the database"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                UPDATE events
+                SET title = ?, description = ?, category = ?, tags = ?, location = ?, date = ?, time = ?, price = ?, image_url = ?
+                WHERE id = ?
+            ''', (
+                event_data['title'],
+                event_data['description'],
+                event_data['category'],
+                json.dumps(event_data['tags']), # Store tags as JSON string
+                event_data['location'],
+                event_data['date'],
+                event_data['time'],
+                event_data['price'],
+                event_data['image_url'],
+                event_id
+            ))
+            conn.commit()
+            success = True
+        except sqlite3.Error as e:
+            print(f"Error updating event {event_id}: {e}") # Use print for backend errors
+            success = False
+        
+        conn.close()
+        return success

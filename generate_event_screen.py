@@ -307,16 +307,45 @@ def main():
     selected_user_name = st.sidebar.selectbox("Choose a user:", list(user_options.keys()))
     selected_user_id = user_options[selected_user_name]
     
-    tab1, tab2, tab3 = st.tabs(["Home", "📅 My Events", "🗺️ Map View"])
+    # tab1, tab2, tab3 = st.tabs(["Home", "📅 My Events", "🗺️ Map View"])
+    # Initialize session state for active tab and event to edit
+    if 'active_tab' not in st.session_state:
+        st.session_state.active_tab = "Home"
+    if 'event_to_edit_id' not in st.session_state:
+        st.session_state.event_to_edit_id = None
+    if 'edit_tab_key' not in st.session_state:
+        st.session_state.edit_tab_key = 0 # To force re-render edit tab if event_to_edit_id changes
+
+    tab_titles = ["Home", "📅 My Events", "🗺️ Map View", "✏️ Edit Event"]
+    
+    # Determine the index of the active tab
+    try:
+        active_tab_index = tab_titles.index(st.session_state.active_tab)
+    except ValueError:
+        active_tab_index = 0 # Default to Home if not found
+
+    # tab1, tab2, tab3, tab4 = st.tabs(tab_titles, key="main_tabs", on_change=lambda: st.session_state.update(active_tab=st.session_state.main_tabs))
+    tab1, tab2, tab3, tab4 = st.tabs(tab_titles)
 
     with tab1:
-        recommendations_tab(recommender, db_manager, selected_user_id)
-    
+        # Check if we landed here from an "Edit" button click
+        # if st.session_state.active_tab == "Home":
+            recommendations_tab(recommender, db_manager, selected_user_id)
+            
     with tab2:
-        my_events_tab(db_manager, selected_user_id)
+        # if st.session_state.active_tab == "📅 My Events":
+            my_events_tab(db_manager, selected_user_id)
     
     with tab3:
-        map_view_tab(db_manager, selected_user_id)
+        # if st.session_state.active_tab == "🗺️ Map View":
+            map_view_tab(db_manager, selected_user_id)
+
+    with tab4:
+        edit_event_tab(db_manager, 2, selected_user_id)
+        # if st.session_state.active_tab == "✏️ Edit Event" and st.session_state.event_to_edit_id is not None:
+        #     edit_event_tab(db_manager, st.session_state.event_to_edit_id, selected_user_id)
+        # elif st.session_state.active_tab == "✏️ Edit Event" and st.session_state.event_to_edit_id is None:
+        #     st.info("Select an event to edit from the 'Home' or 'My Events' tab.")
     
     # Move sidebar content to a separate function
     sidebar_content(db_manager)
@@ -616,6 +645,93 @@ def my_events_tab(db_manager, selected_user_id):
         else:
             st.info("You haven't registered for any events yet. Check out the Recommendations tab to find events you might like!")
 
+def edit_event_tab(db_manager: DatabaseManager, event_id: int, current_user_id: int):
+    """Content for the Edit Event tab"""
+    st.markdown(f"## ✏️ Edit Event (ID: {event_id})")
+
+    event = db_manager.get_event_by_id(event_id)
+    event_organiser_id = db_manager.get_organiser_id_for_event(event_id) # Assuming this method exists
+
+    
+    if not event:
+        st.error(f"Event with ID {event_id} not found.")
+        st.session_state.event_to_edit_id = None
+        st.session_state.active_tab = "Home"
+        st.rerun()
+        return
+    
+    if event_organiser_id != current_user_id:
+        st.warning("You are not authorized to edit this event.")
+        st.session_state.event_to_edit_id = None
+        st.session_state.active_tab = "Home"
+        st.rerun()
+        return
+
+
+    st.markdown("---")
+    st.write("Edit the details of the event below:")
+
+    with st.form(key=f"edit_event_form_{st.session_state.edit_tab_key}"):
+        st.subheader("Event Details")
+        
+        # Get organiser_id (this should ideally be non-editable or derived)
+        # For simplicity, I'm making it display-only here. If you need to change it,
+        # you'd need more complex logic (e.g., selecting a different organizer user).
+        st.write(f"**Organizer ID:** {event['organiser_id']}") 
+
+        edited_title = st.text_input("Title", value=event['title'])
+        edited_category = st.text_input("Category", value=event['category'])
+        edited_description = st.text_area("Description", value=event['description'])
+        edited_location = st.text_input("Location", value=event['location'])
+        
+        # Handle date and time
+        try:
+            default_date = datetime.strptime(event['date'], "%Y-%m-%d").date()
+        except ValueError:
+            default_date = datetime.now().date() # Fallback
+        edited_date = st.date_input("Date", value=default_date)
+        edited_time = st.text_input("Time (HH:MM)", value=event['time']) # Consider using st.time_input for better UI
+        
+        edited_price = st.number_input("Price", value=float(event['price']), min_value=0.0, format="%.2f")
+        edited_image_url = st.text_input("Image URL", value=event['image_url'])
+        
+        # Tags input: convert list to comma-separated string for editing, then back to list
+        edited_tags_str = st.text_input("Tags (comma-separated)", value=", ".join(event['tags']))
+        edited_tags = [tag.strip() for tag in edited_tags_str.split(',') if tag.strip()]
+
+        st.markdown("---")
+        submit_button = st.form_submit_button("Save Changes", type="primary")
+
+        if submit_button:
+            # Validate inputs if necessary (e.g., date format, time format)
+            # For simplicity, assuming valid inputs for now
+
+            updated_event_data = {
+                'title': edited_title,
+                'category': edited_category,
+                'description': edited_description,
+                'location': edited_location,
+                'date': edited_date.strftime("%Y-%m-%d"),
+                'time': edited_time,
+                'price': edited_price,
+                'image_url': edited_image_url,
+                'tags': edited_tags # This will be stored as JSON in DB
+            }
+
+            if db_manager.update_event(event_id, updated_event_data):
+                st.success(f"Event '{edited_title}' (ID: {event_id}) updated successfully!")
+                # After successful save, redirect to Home or My Events tab
+                st.session_state.event_to_edit_id = None # Clear event to edit
+                st.session_state.active_tab = "Home" # Go back to home
+                st.rerun()
+            else:
+                st.error("Failed to update event. Please check the input and try again.")
+    
+    if st.button("Cancel Edit", type="secondary"):
+        st.session_state.event_to_edit_id = None
+        st.session_state.active_tab = "Home"
+        st.rerun()
+    
 def sidebar_content(db_manager):
     """Sidebar content moved to separate function"""
     # Admin section for adding new data
