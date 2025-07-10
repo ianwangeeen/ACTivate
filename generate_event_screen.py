@@ -245,110 +245,66 @@ def load_recommender():
     db_manager = DatabaseManager()
     return EventRecommender(db_manager), db_manager
 
-def main():
-    st.set_page_config(
-        page_title="ACTivate",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
-    # Custom CSS for mobile-friendly design
+def login_screen():
+    """Displays the login screen."""
+    st.title("Login to ACTivate")
+
     st.markdown("""
-    <style>
-    .main-header {
-        text-align: center;
-        color: #1f77b4;
-        margin-bottom: 2rem;
-    }
-    .user-info {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-    }
-    .event-card {
-        background-color: white;
-        padding: 1rem;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .similarity-score {
-        background-color: #e8f4f8;
-        padding: 0.5rem;
-        border-radius: 5px;
-        text-align: center;
-    }
-    .filter-section {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        border: 1px solid #dee2e6;
-    }
-    .map-legend {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        border: 1px solid #dee2e6;
-    }
-    </style>
+        <style>
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 70vh;
+            background-color: #f0f2f6;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: auto;
+        }
+        .login-input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .login-button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #1f77b4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .login-button:hover {
+            background-color: #1a5e8a;
+        }
+        </style>
     """, unsafe_allow_html=True)
-    
-    st.markdown('<h1 class="main-header">ACTivate</h1>', unsafe_allow_html=True)
-    
-    # Initialize recommender
-    recommender, db_manager = load_recommender()
 
-    users = db_manager.get_all_users()
-    user_options = {f"{user['name']}": user['id'] for user in users}
-    selected_user_name = st.sidebar.selectbox("Choose a user:", list(user_options.keys()))
-    selected_user_id = user_options[selected_user_name]
-    
-    # tab1, tab2, tab3 = st.tabs(["Home", "📅 My Events", "🗺️ Map View"])
-    # Initialize session state for active tab and event to edit
-    if 'active_tab' not in st.session_state:
-        st.session_state.active_tab = "Home"
-    if 'event_to_edit_id' not in st.session_state:
-        st.session_state.event_to_edit_id = None
-    if 'edit_tab_key' not in st.session_state:
-        st.session_state.edit_tab_key = 0 # To force re-render edit tab if event_to_edit_id changes
+    with st.container():
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        st.subheader("Please enter your credentials")
 
-    tab_titles = ["Home", "📅 My Events", "🗺️ Map View", "✏️ Edit Event"]
-    
-    # Determine the index of the active tab
-    try:
-        active_tab_index = tab_titles.index(st.session_state.active_tab)
-    except ValueError:
-        active_tab_index = 0 # Default to Home if not found
+        username = st.text_input("Username", key="username_input")
+        password = st.text_input("Password", type="password", key="password_input")
 
-    # tab1, tab2, tab3, tab4 = st.tabs(tab_titles, key="main_tabs", on_change=lambda: st.session_state.update(active_tab=st.session_state.main_tabs))
-    tab1, tab2, tab3, tab4 = st.tabs(tab_titles)
+        if st.button("Login", key="login_button", help="Click to log in"):
+            # Basic hardcoded authentication for demonstration
+            if username == "admin" and password == "password":
+                st.session_state.logged_in = True
+                st.success("Logged in successfully!")
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    with tab1:
-        # Check if we landed here from an "Edit" button click
-        # if st.session_state.active_tab == "Home":
-            recommendations_tab(recommender, db_manager, selected_user_id)
-            
-    with tab2:
-        # if st.session_state.active_tab == "📅 My Events":
-            my_events_tab(db_manager, selected_user_id)
-    
-    with tab3:
-        # if st.session_state.active_tab == "🗺️ Map View":
-            map_view_tab(db_manager, selected_user_id)
 
-    with tab4:
-        edit_event_tab(db_manager, 2, selected_user_id)
-        # if st.session_state.active_tab == "✏️ Edit Event" and st.session_state.event_to_edit_id is not None:
-        #     edit_event_tab(db_manager, st.session_state.event_to_edit_id, selected_user_id)
-        # elif st.session_state.active_tab == "✏️ Edit Event" and st.session_state.event_to_edit_id is None:
-        #     st.info("Select an event to edit from the 'Home' or 'My Events' tab.")
-    
-    # Move sidebar content to a separate function
-    sidebar_content(db_manager)
 
 def map_view_tab(db_manager: DatabaseManager, selected_user_id: int):
     """Content for the map view tab"""
@@ -744,6 +700,100 @@ def sidebar_content(db_manager):
     total_events = len(db_manager.get_all_events())
     st.sidebar.metric("Total Users", total_users)
     st.sidebar.metric("Total Events", total_events)
+
+def main():
+    st.set_page_config(
+        page_title="ACTivate",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # Custom CSS for mobile-friendly design
+    st.markdown("""
+    <style>
+    .main-header {
+        text-align: center;
+        color: #1f77b4;
+        margin-bottom: 2rem;
+    }
+    .user-info {
+        background-color: #f0f2f6;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    .event-card {
+        background-color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .similarity-score {
+        background-color: #e8f4f8;
+        padding: 0.5rem;
+        border-radius: 5px;
+        text-align: center;
+    }
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+    }
+    .map-legend {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<h1 class="main-header">ACTivate</h1>', unsafe_allow_html=True)
+    
+    # Initialize recommender
+    recommender, db_manager = load_recommender()
+
+    users = db_manager.get_all_users()
+    user_options = {f"{user['name']}": user['id'] for user in users}
+    selected_user_name = st.sidebar.selectbox("Choose a user:", list(user_options.keys()))
+    selected_user_id = user_options[selected_user_name]
+    
+    # Initialize session state for active tab and event to edit
+    if 'active_tab' not in st.session_state:
+        st.session_state.active_tab = "Home"
+    if 'event_to_edit_id' not in st.session_state:
+        st.session_state.event_to_edit_id = None
+    if 'edit_tab_key' not in st.session_state:
+        st.session_state.edit_tab_key = 0 # To force re-render edit tab if event_to_edit_id changes
+
+    tab_titles = ["Home", "📅 My Events", "🗺️ Map View", "✏️ Edit Event"]
+    
+    # Determine the index of the active tab
+    try:
+        active_tab_index = tab_titles.index(st.session_state.active_tab)
+    except ValueError:
+        active_tab_index = 0 # Default to Home if not found
+
+    tab1, tab2, tab3, tab4 = st.tabs(tab_titles)
+
+    with tab1:
+        recommendations_tab(recommender, db_manager, selected_user_id)
+            
+    with tab2:
+        my_events_tab(db_manager, selected_user_id)
+    
+    with tab3:
+        map_view_tab(db_manager, selected_user_id)
+
+    with tab4:
+        edit_event_tab(db_manager, 1, selected_user_id)
+    
+    sidebar_content(db_manager)
 
 if __name__ == "__main__":
     main()
