@@ -1,7 +1,7 @@
 import sqlite3
 import json
 from typing import List, Dict
-
+from collections import Counter
 class DatabaseManager:
     def __init__(self, db_name: str = "event_recommender.db"):
         self.db_name = db_name
@@ -365,3 +365,49 @@ class DatabaseManager:
         
         conn.close()
         return success
+    
+    def get_preferences_by_interests(self,interest_list: List[str]) -> Dict[str, Dict[str, int]]:
+        """
+        For each interest in interest_list, compute frequency distributions
+        of preferred_day and office_location among users whose interests include it.
+
+        Returns:
+            {
+                interest: {
+                    'preferred_day': {day: count, ...},
+                    'office_location': {loc: count, ...}
+                },
+                ...
+            }
+        """
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        cursor.execute("SELECT interests, preferred_day, office_location FROM users")
+        rows = cursor.fetchall()
+        conn.close()
+
+        result: Dict[str, Dict[str, Counter]] = {}
+        for interest in interest_list:
+            day_ctr = Counter()
+            office_ctr = Counter()
+            for interests_json, days_json, office in rows:
+                try:
+                    user_interests = json.loads(interests_json)
+                except json.JSONDecodeError:
+                    continue
+                if interest not in user_interests:
+                    continue
+                # Count preferred days (list)
+                try:
+                    days = json.loads(days_json) if days_json else []
+                except json.JSONDecodeError:
+                    days = []
+                for d in days:
+                    day_ctr[d] += 1
+                # Count office_location (scalar)
+                office_ctr[office] += 1
+            result[interest] = {
+                'preferred_day': dict(day_ctr),
+                'office_location': dict(office_ctr)
+            }
+        return result
