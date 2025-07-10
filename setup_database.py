@@ -61,16 +61,66 @@ class DatabaseManager:
         
         conn.commit()
         conn.close()
-    
+
     def populate_sample_data(self, cursor):
         """Populate the database with sample data"""
         # Sample users data
         users_data = [
-            (1, "Samuel Lim", json.dumps(["Technology & Digital", "Learning & Personal Growth"]), json.dumps(["artificial intelligence", "data science", "software development", "career & networking", "investing & financial literacy"]), json.dumps(["Wednesday", "Friday"]), "DTTB"),
-            (2, "Tan Zeng Iain", json.dumps(["Health & Wellness"]), json.dumps(["badminton", "meditation & mindfulness", "mental health", "running & marathons"]), json.dumps(["Monday", "Friday"]), "Connection 1"),
-            (3, "Qing Whey", json.dumps(["Arts & Creativity"]), json.dumps(["calligraphy & typography", "graphic design", "painting & drawing"]), json.dumps(["Friday", "Saturday", "Sunday"]), "Nee Soon Camp"),
-            (4, "Jefferson Low", json.dumps(["Music & Performance", "Arts & Creativity"]), json.dumps(["band", "karaoke", "photography", "video production", "journaling & scrapbooking"]), json.dumps(["Friday", "Saturday"]), "Nee Soon Camp"),
-            (5, "Choo Lan Chan", json.dumps(["Food & Drink", "Music & Performance"]), json.dumps(["stand-up comedy", "foodie trails", "wine appreciation", "coffee appreciation"]), json.dumps(["Wednesday", "Saturday", "Sunday"]), "BMC")
+            (51, "Samuel Lim", json.dumps(["Technology & Digital", "Learning & Personal Growth"]), json.dumps(["artificial intelligence", "data science", "software development", "career & networking", "investing & financial literacy"]), json.dumps(["Wednesday", "Friday"]), "DTTB"),
+            (52, "Tan Zeng Iain", json.dumps(["Health & Wellness"]), json.dumps(["badminton", "meditation & mindfulness", "mental health", "running & marathons"]), json.dumps(["Monday", "Friday"]), "Connection 1"),
+            (53, "Qing Whey", json.dumps(["Arts & Creativity"]), json.dumps(["calligraphy & typography", "graphic design", "painting & drawing"]), json.dumps(["Friday", "Saturday", "Sunday"]), "Nee Soon Camp"),
+            (54, "Jefferson Low", json.dumps(["Music & Performance", "Arts & Creativity"]), json.dumps(["band", "karaoke", "photography", "video production", "journaling & scrapbooking"]), json.dumps(["Friday", "Saturday"]), "Nee Soon Camp"),
+            (55, "Choo Lan Chan", json.dumps(["Food & Drink", "Music & Performance"]), json.dumps(["stand-up comedy", "foodie trails", "wine appreciation", "coffee appreciation"]), json.dumps(["Wednesday", "Saturday", "Sunday"]), "BMC"),
+            (1, 'Alice Zhang', '["Tech & Digital"]', '["ux/ui design", "stand up comedy", "painting & drawing", "web3 & blockchain"]', '["Sunday", "Monday", "Friday"]', 'Nee Soon Camp'),
+            (2, 'Bob Tan', '["Travel & Culture"]', '["mahjong meetups", "nutrition"]', '["Monday"]', 'Connection 1'),
+            (3, 'Charlie Lee', '["Outdoors & Nature"]', '["cycling (road, mtb, leisure)", "photography (street, portrait, nature)"]', '["Sunday", "Monday", "Friday"]', 'BMC'),
+            (4, 'Diana Lim', '["Arts & Creativity"]', '["yoga & pilates", "urban sketching"]', '["Thursday"]', 'Connection 1'),
+            (5, 'Ethan Ng', '["Games & Hobbies"]', '["badminton", "climbing", "chess club"]', '["Wednesday"]', 'DTTB'),
+            (6, 'Fiona Koh', '["Food & Drink"]', '["coffee appreciation", "foodie trails", "nutrition"]', '["Monday", "Saturday", "Friday"]', 'Nee Soon Camp'),
+            (7, 'George Wong', '["Learning & Personal Growth"]', '["journaling & scrapbooking", "book clubs"]', '["Tuesday"]', 'BMC'),
+            (8, 'Hannah Goh', '["Pets & Animals"]', '["animal volunteer work", "cat lovers circle"]', '["Friday", "Wednesday", "Monday"]', 'Connection 1'),
+            (9, 'Ian Chong', '["Health & Wellness"]', '["meditation & mindfulness"]', '["Monday", "Wednesday"]', 'DTTB'),
+            (10, 'Jenny Teo', '["Travel & Culture"]', '["weekend explorers", "local heritage & hidden gems"]', '["Wednesday"]', 'BMC'),
+            (11, 'Kyle Ong', '["Tech & Digital"]', '["cybersecurity", "software development"]', '["Monday", "Thursday"]', 'DTTB'),
+            (12, 'Laura Sim', '["Learning & Personal Growth"]', '["investing & financial literacy", "data science", "artificial intelligence"]', '["Monday", "Wednesday", "Saturday"]', 'Connection 1'),
+            (13, 'Mike Yeo', '["Games & Hobbies"]', '["board games", "trading card games (mtg, pokémon)"]', '["Monday", "Sunday"]', 'Nee Soon Camp'),
+            (14, 'Nina Chua', '["Arts & Creativity"]', '["painting & drawing", "calligraphy & typography"]', '["Monday", "Tuesday", "Wednesday"]', 'BMC'),
+            (15, 'Owen Tan', '["Outdoors & Nature"]', '["stargazing & astronomy", "nature walks & forest bathing"]', '["Wednesday"]', 'Connection 1'),
+            (16, 'Paula Phua', '["Health & Wellness"]', '["yoga & pilates", "spin"]', '["Friday"]', 'DTTB'),
+            (17, 'Quinn Lee', '["Travel & Culture"]', '["travel hacks & points"]', '["Friday", "Tuesday"]', 'BMC'),
+            (18, 'Rachel Lam', '["Food & Drink"]', '["tea appreciation", "wine appreciation"]', '["Saturday", "Wednesday"]', 'Connection 1'),
+            (19, 'Sam Koh', '["Tech & Digital"]', '["ux/ui design", "web3 & blockchain"]', '["Tuesday", "Monday", "Sunday"]', 'DTTB'),
+            (20, 'Tina Ng', '["Games & Hobbies"]', '["mahjong meetups", "chess club"]', '["Thursday"]', 'Nee Soon Camp'),
+            (21, 'Uma Wong', '["Health & Wellness"]', '["mental health", "meditation & mindfulness"]', '["Wednesday", "Thursday"]', 'BMC'),
+            (22, 'Victor Lim', '["Learning & Personal Growth"]', '["languages (e.g. japanese, arabic)"]', '["Friday"]', 'Connection 1'),
+            (23, 'Wendy Goh', '["Pets & Animals"]', '["dog walking groups", "cat lovers circle"]', '["Tuesday"]', 'DTTB'),
+            (24, 'Xavier Tan', '["Food & Drink"]', '["vegan / vegetarian", "nutrition"]', '["Sunday", "Wednesday"]', 'BMC'),
+            (25, 'Yvonne Chia', '["Arts & Creativity"]', '["graphic design", "diy crafts & upcycling"]', '["Friday", "Sunday", "Wednesday"]', 'Connection 1'),
+            (26, 'Zack Neo', '["Outdoors & Nature"]', '["bouldering", "kayaking / watersports"]', '["Friday", "Monday", "Wednesday"]', 'DTTB'),
+            (27, 'Aaron Ho', '["Learning & Personal Growth"]', '["career & networking", "investing & financial literacy"]', '["Saturday", "Sunday", "Wednesday"]', 'BMC'),
+            (28, 'Bella Sim', '["Tech & Digital"]', '["artificial intelligence", "data science"]', '["Thursday", "Tuesday"]', 'Connection 1'),
+            (29, 'Chris Ong', '["Arts & Creativity"]', '["urban sketching", "journaling & scrapbooking"]', '["Sunday"]', 'DTTB'),
+            (30, 'Delia Lee', '["Games & Hobbies"]', '["board games", "stand up comedy"]', '["Tuesday"]', 'BMC'),
+            (31, 'Eric Tan', '["Music & Performance"]', '["band", "karaoke"]', '["Thursday", "Friday", "Tuesday"]', 'Connection 1'),
+            (32, 'Grace Ng', '["Health & Wellness"]', '["nutrition", "yoga & pilates"]', '["Saturday", "Monday"]', 'DTTB'),
+            (33, 'Henry Teo', '["Travel & Culture"]', '["local heritage & hidden gems", "weekend explorers"]', '["Sunday", "Monday", "Saturday"]', 'BMC'),
+            (34, 'Ivy Goh', '["Food & Drink"]', '["tea appreciation", "coffee appreciation"]', '["Wednesday"]', 'Connection 1'),
+            (35, 'Jack Lim', '["Outdoors & Nature"]', '["nature walks & forest bathing", "stargazing & astronomy"]', '["Tuesday", "Sunday"]', 'DTTB'),
+            (36, 'Karen Yeo', '["Tech & Digital"]', '["software development", "cybersecurity"]', '["Wednesday", "Thursday", "Sunday"]', 'BMC'),
+            (37, 'Leo Chua', '["Games & Hobbies"]', '["chess club", "mahjong meetups"]', '["Saturday", "Monday", "Thursday"]', 'Connection 1'),
+            (38, 'Mia Koh', '["Arts & Creativity"]', '["painting & drawing", "pottery / ceramics"]', '["Wednesday", "Tuesday"]', 'Nee Soon Camp'),
+            (39, 'Nathan Wong', '["Learning & Personal Growth"]', '["book clubs", "languages (e.g. japanese, arabic)"]', '["Friday", "Monday"]', 'BMC'),
+            (40, 'Olivia Phua', '["Pets & Animals"]', '["animal volunteer work", "dog walking groups"]', '["Tuesday", "Wednesday"]', 'Connection 1'),
+            (41, 'Peter Tan', '["Food & Drink"]', '["foodie trails", "vegan / vegetarian"]', '["Sunday", "Monday", "Saturday"]', 'DTTB'),
+            (42, 'Quincy Lee', '["Tech & Digital"]', '["ux/ui design", "web3 & blockchain"]', '["Saturday", "Tuesday", "Sunday"]', 'Connection 1'),
+            (43, 'Rachel Ong', '["Music & Performance"]', '["video production", "graphic design"]', '["Saturday", "Monday"]', 'BMC'),
+            (44, 'Simon Ng', '["Health & Wellness"]', '["spin", "nutrition"]', '["Tuesday", "Sunday", "Wednesday"]', 'Connection 1'),
+            (45, 'Tara Lim', '["Arts & Creativity"]', '["calligraphy & typography", "diy crafts & upcycling"]', '["Sunday", "Wednesday", "Thursday"]', 'DTTB'),
+            (46, 'Umar Goh', '["Travel & Culture"]', '["travel hacks & points", "weekend explorers"]', '["Friday"]', 'BMC'),
+            (47, 'Vera Teo', '["Games & Hobbies"]', '["board games", "stand up comedy"]', '["Saturday"]', 'Connection 1'),
+            (48, 'Will Chong', '["Learning & Personal Growth"]', '["book clubs", "career & networking"]', '["Monday"]', 'Nee Soon Camp'),
+            (49, 'Xena Ho', '["Outdoors & Nature"]', '["climbing", "bouldering"]', '["Tuesday", "Monday", "Wednesday"]', 'DTTB'),
+            (50, 'Yuri Sim', '["Music & Performance"]', '["video production"]', '["Sunday"]', 'Connection 1')
         ]
         
         cursor.executemany('''
@@ -185,7 +235,7 @@ class DatabaseManager:
         
         try:
             cursor.execute('''
-                INSERT INTO users (name, category, interests, preferred_day, office_location) VALUES (?, ?, ?, ?)
+                INSERT INTO users (name, category, interests, preferred_day, office_location) VALUES (?, ?, ?, ?, ?)
             ''', (name, json.dumps(category), json.dumps(interests), json.dumps(preferred_day), office_location))
             conn.commit()
             success = True
@@ -411,3 +461,4 @@ class DatabaseManager:
                 'office_location': dict(office_ctr)
             }
         return result
+    
